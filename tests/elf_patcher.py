@@ -4,8 +4,8 @@ import time
 from src.elf_patcher import patch_method
 from src.cpu_util import get_process_cpu_usage
 
-BINARY_PATH = "tests/usr-bin-id"
-FUNCTION_TO_PATCH = "function_name_in_binary"
+BINARY_PATH = "tests/dummy"
+FUNCTION_TO_PATCH = "main"
 
 def test_hang():
     # Make a backup and patch the binary to hang
