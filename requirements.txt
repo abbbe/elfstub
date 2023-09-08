@@ -1,3 +1,4 @@
 pytest
 pyelftools
 psutil
+loguru

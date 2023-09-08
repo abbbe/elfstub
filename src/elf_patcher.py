@@ -1,28 +1,31 @@
-import sys
+from loguru import logger
+import argparse
 from elftools.elf.elffile import ELFFile
-from elftools.elf.relocation import RelocationSection
 
-def enumerate_methods(elf_file_path):
-    with open(elf_file_path, 'rb') as f:
-        elffile = ELFFile(f)
-        symbol_tables = [s for s in elffile.iter_sections() if s.header['sh_type'] == 'SHT_SYMTAB']
-        for section in symbol_tables:
-            for symbol in section.iter_symbols():
-                print(symbol.name)
-
-def patch_method(elf_file_path, method_name, patch_type):
-    assert patch_type in ['loop', 'crash'], "Unsupported patch type"
-
+def enumerate_symbols(elf_file_path, section_type, symbol_name):
+    """
+        This iterator yields tuples (f, symbol)
+    """
     with open(elf_file_path, 'r+b') as f:
         elffile = ELFFile(f)
-        section = elffile.get_section_by_name('.text')
-        symbols = {sym.name: sym for sym in elffile.get_section_by_name('.symtab').iter_symbols()}
-        
-        if method_name not in symbols:
-            print(f"Method {method_name} not found!")
-            return
 
-        symbol = symbols[method_name]
+        for section in elffile.iter_sections():
+            if section.header['sh_type'] != section_type:
+                logger.debug(f"skipping sh_type '{section.header['sh_type']}' != '{section_type}'")
+                continue
+            
+            for symbol in section.iter_symbols():
+                if symbol_name is not None and symbol_name != symbol.name:
+                    continue
+                yield f, symbol
+
+def patch_method(elf_file_path, section_type, method_name, patch_type):
+    patch_count = 0
+
+    for f, symbol in enumerate_symbols(elf_file_path, section_type, method_name):
+        if not symbol['st_value']:
+            continue # WTF?
+
         f.seek(symbol['st_value'])
         
         if patch_type == 'loop':
@@ -31,14 +34,33 @@ def patch_method(elf_file_path, method_name, patch_type):
         elif patch_type == 'crash':
             # Invalid instruction: UD2 (0F 0B)
             f.write(b'\x0F\x0B')
+        
+        logger.info(f"patched {symbol.name} for {patch_type} seek {symbol['st_value']}")
+        patch_count += 1
+            
+    return patch_count
+
+def main():
+    parser = argparse.ArgumentParser(description='Patch or enumerate methods in ELF binaries.')
+    parser.add_argument('--section', choices=['SHT_DYNSYM', 'SHT_SYMTAB'], required=True, \
+                        help='Section to target (SHT_DYNSYM or SHT_SYMTAB)')
+
+    parser.add_argument('--method', \
+                        help='Method to target (if not specified - target all)')
+    
+    # Define a mutually exclusive group for --enumerate and --patch
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--enumerate', action='store_true', help='Enumerate methods without patching')
+    group.add_argument('--patch', choices=['loop', 'crash'], help='Patch type (loop or crash)')
+
+    parser.add_argument('ELF_PATH', type=str, help='Path to the ELF binary')
+    args = parser.parse_args()
+
+    if args.enumerate:
+        for _, symbol in enumerate_symbols(args.ELF_PATH, args.section):
+            print(symbol.name)
+    else:
+        patch_method(args.ELF_PATH, args.section, args.method, args.patch)
 
 if __name__ == "__main__":
-    action = sys.argv[1]
-    elf_file_path = sys.argv[2]
-
-    if action == "enumerate":
-        enumerate_methods(elf_file_path)
-    elif action == "patch":
-        method_name = sys.argv[3]
-        patch_type = sys.argv[4]
-        patch_method(elf_file_path, method_name, patch_type)
+    main()

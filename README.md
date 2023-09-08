@@ -22,8 +22,8 @@ tests/elf_patcher.py ..                                                         
 Manual tests:
 ```
 (venv) abb@fw6b:~/elfstub$ ./tests/dummy
-(venv) abb@fw6b:~/elfstub$ ./tests/dummy.die 
+(venv) abb@fw6b:~/elfstub$ ./tests/dummy.crash
 Illegal instruction (core dumped)
-(venv) abb@fw6b:~/elfstub$ ./tests/dummy.hang 
+(venv) abb@fw6b:~/elfstub$ ./tests/dummy.loop
 ^C
 ```
