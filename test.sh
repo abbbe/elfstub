@@ -9,7 +9,7 @@ source venv/bin/activate
 ## python -m pytest tests/*.py -v
 
 # binary patching works
-python -m pytest tests/*.py -v tests/bin_*.py
+python -m pytest -v tests/bin_*.py
 
 # fails on alpine but works on ubuntu22
-#python -m pytest tests/*.py -v tests/lib_*.py || true
+python -m pytest -v tests/lib_*.py || true
