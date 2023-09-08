@@ -1,12 +1,36 @@
+import sys
 from loguru import logger
+
+logger.remove()
+logger.add(sys.stderr, level="INFO")
+
 import argparse
 from elftools.elf.elffile import ELFFile
 
-def enumerate_symbols(elf_file_path, section_type, symbol_name):
+def is_function_symbol(symbol):
+    """ Determine if the symbol is a function """
+    return symbol['st_info']['type'] == 'STT_FUNC'
+
+def is_within_text_section(symbol, elffile):
+    """ Determine if the symbol is within the .text section """
+    text_section = elffile.get_section_by_name('.text')
+    start = text_section['sh_addr']
+    end = start + text_section['sh_size']
+    symbol_start = symbol['st_value']
+    symbol_end = symbol_start + symbol['st_size']
+
+    return start <= symbol_start and symbol_end <= end
+
+def enumerate_symbols(elf_file_path, section_type, symbol_name=None, read_only=False):
     """
         This iterator yields tuples (f, symbol)
     """
-    with open(elf_file_path, 'r+b') as f:
+    if read_only:
+        mode = 'rb'
+    else:
+        mode = 'r+b'
+
+    with open(elf_file_path, mode) as f:
         elffile = ELFFile(f)
 
         for section in elffile.iter_sections():
@@ -17,15 +41,14 @@ def enumerate_symbols(elf_file_path, section_type, symbol_name):
             for symbol in section.iter_symbols():
                 if symbol_name is not None and symbol_name != symbol.name:
                     continue
+                if not is_function_symbol(symbol) or not is_within_text_section(symbol, elffile):
+                    continue
                 yield f, symbol
 
 def patch_method(elf_file_path, section_type, method_name, patch_type):
     patch_count = 0
 
     for f, symbol in enumerate_symbols(elf_file_path, section_type, method_name):
-        if not symbol['st_value']:
-            continue # WTF?
-
         f.seek(symbol['st_value'])
         
         if patch_type == 'loop':
@@ -35,10 +58,10 @@ def patch_method(elf_file_path, section_type, method_name, patch_type):
             # Invalid instruction: UD2 (0F 0B)
             f.write(b'\x0F\x0B')
         
-        logger.info(f"patched {symbol.name} for {patch_type} seek {symbol['st_value']}")
+        logger.debug(f"patched {symbol.name} for {patch_type} seek {symbol['st_value']}")
         patch_count += 1
             
-    return patch_count
+    logger.info(f"Patched {patch_count} methods")
 
 def main():
     parser = argparse.ArgumentParser(description='Patch or enumerate methods in ELF binaries.')

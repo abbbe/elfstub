@@ -3,10 +3,10 @@ import subprocess
 import time
 import os
 import shutil
-from src.elf_patcher import patch_all_methods
+from src.elf_patcher import enumerate_symbols, patch_method
 from src.cpu_util import get_process_cpu_usage
 
-LIB_PATH = "/lib/x86_64-linux-gnu/libc.so.6"  # This can be parameterized
+LIB_PATH = "/lib/x86_64-linux-gnu/libc.so.6"
 DUMMY_PROGRAM_PATH = "tests/dummy"
 
 @pytest.fixture
@@ -19,9 +19,9 @@ def setup_temp_dir():
     yield temp_dir
     #shutil.rmtree(temp_dir)
 
-def test_loop(setup_temp_dir):
+def test_all_loop(setup_temp_dir):
     temp_dir = setup_temp_dir
-    patch_all_methods(os.path.join(temp_dir, "libc.so.6"), 'loop', 'SHT_DYNSYM')
+    patch_method(os.path.join(temp_dir, "libc.so.6"), 'SHT_DYNSYM', None, 'loop')
 
     env = os.environ.copy()
     env["LD_LIBRARY_PATH"] = temp_dir
@@ -36,9 +36,9 @@ def test_loop(setup_temp_dir):
 
     assert cpu_usage > 90, "Expected high CPU usage, indicating a loop"
 
-def test_crash(setup_temp_dir):
+def test_all_crash(setup_temp_dir):
     temp_dir = setup_temp_dir
-    patch_all_methods(os.path.join(temp_dir, "libc.so.6"), 'crash', 'SHT_DYNSYM')
+    patch_method(os.path.join(temp_dir, "libc.so.6"), 'SHT_DYNSYM', None, 'crash')
 
     env = os.environ.copy()
     env["LD_LIBRARY_PATH"] = temp_dir
