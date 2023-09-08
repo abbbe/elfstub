@@ -62,6 +62,7 @@ def patch_method(elf_file_path, section_type, method_name, patch_type):
         patch_count += 1
             
     logger.info(f"Patched {patch_count} methods")
+    return patch_count
 
 def main():
     parser = argparse.ArgumentParser(description='Patch or enumerate methods in ELF binaries.')

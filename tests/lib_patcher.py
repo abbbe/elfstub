@@ -47,3 +47,30 @@ def test_all_crash(setup_temp_dir):
     result = subprocess.run([DUMMY_PROGRAM_PATH], env=env)
 
     assert result.returncode != 0, "Expected non-zero exit code, indicating a crash"
+
+
+def test_unused_nocrash(setup_temp_dir):
+    temp_dir = setup_temp_dir
+    n = patch_method(os.path.join(temp_dir, "libc.so.6"), 'SHT_DYNSYM', 'ioctl', 'crash')
+    assert n == 1, "Expected to patch one and only one function"
+
+    env = os.environ.copy()
+    env["LD_LIBRARY_PATH"] = temp_dir
+
+    # Run the dummy program and capture the exit code
+    result = subprocess.run([DUMMY_PROGRAM_PATH], env=env)
+
+    assert result.returncode == 0, "Expected zero exit code, indicating normal execution"
+
+def test_used_crash(setup_temp_dir):
+    temp_dir = setup_temp_dir
+    n = patch_method(os.path.join(temp_dir, "libc.so.6"), 'SHT_DYNSYM', 'malloc', 'crash')
+    assert n == 1, "Expected to patch one and only one function"
+
+    env = os.environ.copy()
+    env["LD_LIBRARY_PATH"] = temp_dir
+
+    # Run the dummy program and capture the exit code
+    result = subprocess.run([DUMMY_PROGRAM_PATH], env=env)
+
+    assert result.returncode != 0, "Expected non-zero exit code, indicating a crash"
