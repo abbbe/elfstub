@@ -1,0 +1,3 @@
+venv
+tests/usr-bin-id*
+**/__pycache__
