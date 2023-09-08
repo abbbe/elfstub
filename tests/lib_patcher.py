@@ -5,8 +5,8 @@ import os
 import shutil
 from src.elf_patcher import enumerate_symbols, patch_method
 from src.cpu_util import get_process_cpu_usage
+from src.config import LIB_PATH, LIBC_FILENAME
 
-LIB_PATH = "/lib/x86_64-linux-gnu/libc.so.6"
 DUMMY_PROGRAM_PATH = "tests/dummy"
 
 @pytest.fixture
@@ -21,7 +21,7 @@ def setup_temp_dir():
 
 def test_all_loop(setup_temp_dir):
     temp_dir = setup_temp_dir
-    patch_method(os.path.join(temp_dir, "libc.so.6"), 'SHT_DYNSYM', None, 'loop')
+    patch_method(os.path.join(temp_dir, LIBC_FILENAME), 'SHT_DYNSYM', None, 'loop')
 
     env = os.environ.copy()
     env["LD_LIBRARY_PATH"] = temp_dir
@@ -38,7 +38,7 @@ def test_all_loop(setup_temp_dir):
 
 def test_all_crash(setup_temp_dir):
     temp_dir = setup_temp_dir
-    patch_method(os.path.join(temp_dir, "libc.so.6"), 'SHT_DYNSYM', None, 'crash')
+    patch_method(os.path.join(temp_dir, LIBC_FILENAME), 'SHT_DYNSYM', None, 'crash')
 
     env = os.environ.copy()
     env["LD_LIBRARY_PATH"] = temp_dir
@@ -51,7 +51,7 @@ def test_all_crash(setup_temp_dir):
 
 def test_unused_nocrash(setup_temp_dir):
     temp_dir = setup_temp_dir
-    n = patch_method(os.path.join(temp_dir, "libc.so.6"), 'SHT_DYNSYM', 'ioctl', 'crash')
+    n = patch_method(os.path.join(temp_dir, LIBC_FILENAME), 'SHT_DYNSYM', 'ioctl', 'crash')
     assert n == 1, "Expected to patch one and only one function"
 
     env = os.environ.copy()
@@ -64,7 +64,7 @@ def test_unused_nocrash(setup_temp_dir):
 
 def test_used_crash(setup_temp_dir):
     temp_dir = setup_temp_dir
-    n = patch_method(os.path.join(temp_dir, "libc.so.6"), 'SHT_DYNSYM', 'malloc', 'crash')
+    n = patch_method(os.path.join(temp_dir, LIBC_FILENAME), 'SHT_DYNSYM', 'malloc', 'crash')
     assert n == 1, "Expected to patch one and only one function"
 
     env = os.environ.copy()

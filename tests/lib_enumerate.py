@@ -1,7 +1,6 @@
 import pytest
 from src.elf_patcher import enumerate_symbols
-
-LIB_PATH = "/lib/x86_64-linux-gnu/libc.so.6"
+from src.config import LIB_PATH
 
 def test_enumerate_dynsym():
     method_list = map(lambda x: x[1].name, \
